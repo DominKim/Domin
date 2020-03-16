@@ -45,9 +45,6 @@ hist(df$RED) # 정규분포 확인
 df[4:39] <- scale(df[4:39])
 View(df)
 
-# 정규화 데이터 저장
-write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
-
 # 데이터 분류
 # 1. 국가별 변수 만들기
 # 522개 행 만들기
@@ -97,10 +94,23 @@ for (i in 1:length(df_num)) {
   ab <- data.frame(a,b)
 }
 
-# 이상치 제거 함수 생성
-df <- df %>% filter(GOALS >= ab[1,a])
-colnames(df)[6:41] <- row.names(ab)
+# 정규화 및 정려 데이터 저장
+write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
+ab
+dim(ab) # 36, 2
+df <- f_df[1:4]
+df[5] <- f_df[41]
+df[6:41] <- f_df[5:40]
+row.names(ab) <- colnames(df)[6:41]
 View(ab)
+# 이상치 제거
+df_f <- df
+for (i in 1:36) {
+  df_f <- df_f %>% filter(df_f[i+ 5] >= ab[i,1] & df_f[i + 5] <= ab[i,2])
+}
+table(df$RANK_C) # 360, 162
+table(df_f$RANK_C) # 127, 53
+boxplot(df_f[6:41])
 
 # 변수명 추출
 aa <- colnames(df)
@@ -110,7 +120,6 @@ paste(aa2, collapse = "+")
 str(df)
 
 # plot.lm : 다중 회귀모델 lm(y ~ x) x : . (모든데이터)
-model <- lm(RANK ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df)
+model <- lm(RANK ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
 summary(model)
 plot(model)
-
