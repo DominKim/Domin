@@ -7,8 +7,8 @@ library(RJDBC)
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
 con <- dbConnect(drv, "jdbc:oracle:thin:@//localhost:32769/xe", "scott", "tiger")
-d1 <- dbGetQuery(con, "select * from european")
 dbDisconnect(con) # 연결 종료
+d1 <- dbGetQuery(con, "select * from european order by ROWN")
 str(d1)
 
 # 구단명, 시즌 분리
@@ -18,7 +18,7 @@ d1$TEAM <- team
 d1$SEASON <- season
 View(d1)
 dim(d1)
-522*38
+# 522*38
 # 질문 엑셀 파일 임포트 했는데 행의 순서가 바뀜?
 
 # 빈 data.frame 만들기
@@ -26,15 +26,15 @@ df <- data.frame(matrix(nrow = 522, ncol = 1))
 df
 
 # 변수 위치 조정
-df[1] <- d1[1]
-colnames(df[1]) <- c("r")
-df[2] <- d1[2]
-df[3] <- d1[3]
-df[4] <- d1[40]
-df[5:40] <- d1[4:39]
+df[1] <- d1[2]
+colnames(df) <- "RANK"
+df[2] <- d1[3]
+df[3] <- d1[40]
+df[4 :39] <- d1[4:39]
 View(df)
-df <- df %>% select(-matrix.nrow...522..ncol...1.)
-
+str(df)
+dim(df)
+View(df)
 # 데이터 프레임 저장
 library(xlsx)
 write.xlsx(df, "indiv_project.xlsx", sheetName = "First", row.names = F)
@@ -49,55 +49,58 @@ View(df)
 write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
 
 # 데이터 분류
-# 1. 국가별
+# 1. 국가별 변수 만들기
+# 522개 행 만들기
 df$REAGUE <- as.vector(runif(522, 1, 1))
+# 빈 열 만들기
+df$REAGUE <- NA
+df$REAGUE[1:162] <- 1
 df$REAGUE[163:344] <- 2
 df$REAGUE[345:522] <- 3
 df$REAGUE <- ifelse(df$REAGUE == 1, "Germany",
                     ifelse(df$REAGUE == 2, "Spain", "England"))
-View(df$REAGUE)
+# 변수 정렬
+View(df)
+dim(df)
+f_df <- df[1:3]
+f_df[4] <- df[40]
+f_df[5:40] <- df[4:39]
+View(f_df)
 
 # 2. 순위 별
-df <- df %>% mutate(RANK_C = ifelse(RANK <= 6, "Upper", "Lower"))
+f_df <- f_df %>% mutate(RANK_C = ifelse(RANK <= 6, "Upper", "Lower"))
+View(f_df)
+
+# 변수 정렬
+df <- f_df[1:4]
+df[5] <- f_df[41]
+df[6:41] <- f_df[5:40]
 View(df)
 
 # 데이터 확인
-str(df)
 dim(df) # 522  41
+str(df)
 
+# 이상치 제거
 # 연속형 변수 저장
-df_num <- df[,4:39]
+df_num <- df[,6:41]
 
-# 
+# min, max 추출
 boxplot(df_num)$stats
-name <- colnames(df_num)
-df_num$name[1]
-boxplot(df_num$GOALS)$stats
+length(df_num)
 
-for (i in 1:36) {
-  df_num$GOALS <- ifelse(df_num$GOALS >= boxplot(df_num)$stats[,i][1] &
-                     df_num$GOALS <= boxplot(df_num)$stats[,i][5], df_num$GOALS, NA)
+# a, b 변수 생셩
+a <- NA;b <- NA
+for (i in 1:length(df_num)) {
+  a[i] <- boxplot(df_num)$stats[,i][1]
+  b[i] <- boxplot(df_num)$stats[,i][5]
+  ab <- data.frame(a,b)
 }
 
-class(boxplot(df_num)$stats[1][1])
-View(df_num)
-table(is.na(df_num$GOALS))
-
-a <- function(x) {
-  print(df_num$x)
-}
-a("GOALS")
-
-df_num$GOALS <- ifelse(df_num$GOALS >= boxplot(df_num)$stats[,i][1] &
-                         df_num$GOALS <= boxplot(df_num)$stats[,i][5], df_num$GOALS, NA)
-for (i in 1) {
-  a <-unlist(str_extract_all(name[i], "[A-Z]{3,}"))
-  print(a)
-  print(df_num$a)
-}
-
-df_
-colnames(df_num)
+# 이상치 제거 함수 생성
+df <- df %>% filter(GOALS >= ab[1,a])
+colnames(df)[6:41] <- row.names(ab)
+View(ab)
 
 # 변수명 추출
 aa <- colnames(df)
