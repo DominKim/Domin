@@ -1,5 +1,5 @@
 # 학위논문 데이터 분석
-
+Sys.setenv("JAVA_HOME" = "/Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home")
 # oracle db 연결 패키지 in memory
 library(DBI)
 library(RJDBC)
@@ -9,6 +9,7 @@ drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
 con <- dbConnect(drv, "jdbc:oracle:thin:@//localhost:32769/xe", "scott", "tiger")
 dbDisconnect(con) # 연결 종료
 d1 <- dbGetQuery(con, "select * from european order by ROWN")
+dbSendQuery(con, "")
 str(d1)
 
 # 구단명, 시즌 분리
@@ -41,21 +42,30 @@ write.xlsx(df, "indiv_project.xlsx", sheetName = "First", row.names = F)
 
 
 # 데이터 정규화
-hist(df$RED) # 정규분포 확인
-df[4:39] <- scale(df[4:39])
-View(df)
+# scale() = 표준화
+# 정규화 nor = (x - min) / max - min
+# 정규분포 확인 shapiro.test
+shapiro.test(df[,5]) # p-value = 2.457e-12  < 0.05 : 정규성 X
+# 정규분포 함수 
+nor <- function(x) {
+  re <- (x - min(x)) / max(x) - min(x)
+  return(re)
+}
+df[4:39] <- nor(df[4:39])
+summary(df)
 
 # 데이터 분류
 # 1. 국가별 변수 만들기
 # 522개 행 만들기
-df$REAGUE <- as.vector(runif(522, 1, 1))
+df$LEAGUE <- as.vector(runif(522, 1, 1))
 # 빈 열 만들기
-df$REAGUE <- NA
-df$REAGUE[1:162] <- 1
-df$REAGUE[163:344] <- 2
-df$REAGUE[345:522] <- 3
-df$REAGUE <- ifelse(df$REAGUE == 1, "Germany",
-                    ifelse(df$REAGUE == 2, "Spain", "England"))
+df$LEAGUE <- NA
+df$LEAGUE[1:162] <- 1
+df$LEAGUE[163:342] <- 2
+df$LEAGUE[343:522] <- 3
+df$LEAGUE <- ifelse(df$LEAGUE == 1, "Germany",
+                    ifelse(df$LEAGUE == 2, "Spain", "England"))
+
 # 변수 정렬
 View(df)
 dim(df)
@@ -88,29 +98,49 @@ length(df_num)
 
 # a, b 변수 생셩
 a <- NA;b <- NA
-for (i in 1:length(df_num)) {
+for (i in 1:length(df_num)) { 
   a[i] <- boxplot(df_num)$stats[,i][1]
   b[i] <- boxplot(df_num)$stats[,i][5]
   ab <- data.frame(a,b)
 }
 
-# 정규화 및 정려 데이터 저장
-write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
-ab
-dim(ab) # 36, 2
-df <- f_df[1:4]
-df[5] <- f_df[41]
-df[6:41] <- f_df[5:40]
-row.names(ab) <- colnames(df)[6:41]
-View(ab)
+# 정규화 및 정렬 데이터 저장
+
 # 이상치 제거
 df_f <- df
 for (i in 1:36) {
   df_f <- df_f %>% filter(df_f[i+ 5] >= ab[i,1] & df_f[i + 5] <= ab[i,2])
 }
 table(df$RANK_C) # 360, 162
-table(df_f$RANK_C) # 127, 53
+table(df_f$RANK_C) # 217, 53
 boxplot(df_f[6:41])
+write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
+
+# 변수 간의 관계분석
+# 1) 범주형 vs 범주형
+tab1 <- table(df_f$RANK_C, df_f$LEAGUE)
+tab1
+#         England Germany Spain
+# Lower      94      81    42
+# Upper      17      21    15
+barplot(tab1, beside = T, horiz = F, col = rainbow(2), legend = row.names(tab1), ylim = c(0, 100))
+mosaicplot(tab1, color = rainbow(3))
+ggplot(df_f, aes(x = REAGUE)) + geom_bar()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################################
 
 # 변수명 추출
 aa <- colnames(df)
