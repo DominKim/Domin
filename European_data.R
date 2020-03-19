@@ -104,17 +104,25 @@ for (i in 1:length(df_num)) {
   ab <- data.frame(a,b)
 }
 
-# 정규화 및 정렬 데이터 저장
-
 # 이상치 제거
 df_f <- df
 for (i in 1:36) {
   df_f <- df_f %>% filter(df_f[i+ 5] >= ab[i,1] & df_f[i + 5] <= ab[i,2])
 }
 table(df$RANK_C) # 360, 162
-table(df_f$RANK_C) # 217, 53
+table(df_f$RANK_C) # 204, 51
 boxplot(df_f[6:41])
 write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
+str(df_f)
+# 비연속형 변수
+# RANK, TEAM, SEASON, LEAGUE, RANK_C
+# 연속형 변수
+# LEAGUE, RANK_C, GOALS, SHOTS, YELLOW, RED, POSSESSION, PASS, AERIALWON, 
+# SHOTS_CONCEDED, TACKLES, INTERCEPTIONS, FOULS, OFFSIDES, SHOTS_ON_TARGET, 
+# DRIBBLES, FOULDED, OPEN_PLAY, COUNTER_ATTACK, SET_PIECE, PENALTY, OWN_GOAL, 
+# CROSS, THROUGH_BALL, LONG_BALLS, SHORT_PASSES, LEFT_SIDE, MIDDLE_SIDE, 
+# RIGHT_SIDE, SHOT_LEFT, SHOT_MIDDLE, SHOT_RIGHT, IN_6_YARD_BOX, IN_18_YARD_BOX
+# OUTSIDE_OF_BOX, OWN_THIRD
 
 # 변수 간의 관계분석
 # 1) 범주형 vs 범주형
@@ -123,34 +131,73 @@ tab1
 #         England Germany Spain
 # Lower      94      81    42
 # Upper      17      21    15
-barplot(tab1, beside = T, horiz = F, col = rainbow(2), legend = row.names(tab1), ylim = c(0, 100))
+barplot(tab1, beside = F, horiz = F, col = rainbow(2), legend = row.names(tab1), ylim = c(0, 100))
 mosaicplot(tab1, color = rainbow(3))
-ggplot(df_f, aes(x = REAGUE)) + geom_bar()
+ggplot(df_f, aes(x = LEAGUE, fill = RANK_C)) + geom_bar()
+# [해석] Lower : England > Germany > Spain : 평준화 정도로 해석 가능
+#        Upper : Germany > England > Spain : 평준화 정도로 해석 가능
+# Why ? 이상치를 제거해서 엄청 잘하거나 못하는 기록을 가진 팀 제거!
+
+# 시즌별 순위 변동 확인
+library(lattice)
+dotplot(-RANK ~ SEASON, data = df_f, groups = TEAM, type= "o")
+
+
+# 상관행렬
+df_f_cor <- cor(df_f[,6:41])
+round(df_f_cor, 2)
+library(corrplot)
+corrplot(df_f_cor, 
+         method = "shade",  # 숫자로 표현
+         type = "lower",     # 색상 200개 선정
+         order = "hclust",   # 왼쪽 아래 행렬만 표시
+         addCoef.col = "red",  # 상관계수 색깔
+         addshade="all", # 상관관계 방향선 제시
+         diag = F,
+         number.cex = 0.5, 
+         tl.cex = 0.5)
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-######################################################
+##############################################################################
+################################# 추론 통계 ##################################
+##############################################################################
+# 다중 회귀분석을 위해 범주형 변수 -> 숫자 변환
+df_f <- df_f %>% mutate(RANK_C2 = ifelse(RANK_C == "Upper", 1, 2))
+df_f <- df_f %>% mutate(LEAGUE2 = ifelse(LEAGUE == "Germany", 1,
+                                         ifelse(LEAGUE == "Spain", 2, 3)))
 
 # 변수명 추출
 aa <- colnames(df)
 aa2 <- aa[4:39]
 dim(aa2)
 paste(aa2, collapse = "+")
+paste(aa2, collapse = ", ")
 str(df)
 
 # plot.lm : 다중 회귀모델 lm(y ~ x) x : . (모든데이터)
+# 순위 예측
 a1 <- read.xlsx("clustering.xlsx", sheetName = "군집분석")
 model <- lm(RANK ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
 summary(model)
 plot(model)
+# [결과식] RANK = -89.537 + 25.041*YELLOW + 224.440*RED -87.716*AERIALWON
+# + 355.221*SHOTS_CONCEDED - 342.777*OPEN_PLAY -3 36.073*SET_PIECE 
+# - 558.449*OWN_GOAL - 574.824*THROUGH_BALL
+# Adjusted R-squared:  0.6759(67%) , p-value: < 2.2e-16(유의한 회귀식)
+
+
+# 상위권 하위권 예측
+model2 <- lm(RANK_C2 ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
+summary(model2)
+plot(model2)
+# Adjusted R-squared:  0.4796 (47%) , p-value: < 2.2e-16(유의한 회귀식)
+
+
+# 리그 예측
+model3 <- lm(LEAGUE2 ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
+summary(model3)
+plot(model3)
+# Adjusted R-squared:  0.8329 (83%) , p-value: < 2.2e-16(유의한 회귀식)
