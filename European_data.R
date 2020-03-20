@@ -149,13 +149,13 @@ round(df_f_cor, 2)
 library(corrplot)
 corrplot(df_f_cor, 
          method = "shade",  # 숫자로 표현
-         type = "lower",     # 색상 200개 선정
+         type = "upper",     # 색상 200개 선정
          order = "hclust",   # 왼쪽 아래 행렬만 표시
-         addCoef.col = "red",  # 상관계수 색깔
-         addshade="all", # 상관관계 방향선 제시
+         addCoef.col = "black",  # 상관계수 색깔
          diag = F,
          number.cex = 0.5, 
-         tl.cex = 0.5)
+         tl.cex = 0.5,
+         addcolorlabel="no")
 
 
 
