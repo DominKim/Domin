@@ -1,15 +1,26 @@
-# 학위논문 데이터 분석
+# import package
 Sys.setenv("JAVA_HOME" = "/Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home")
-# oracle db 연결 패키지 in memory
-library(DBI)
-library(RJDBC)
+if(!require("dplyr")) install.packages("dplyr"); library(dplyr)
+if(!require("DBI")) install.packages("DBI"); library(DBI)
+if(!require("RJDBC")) install.packages("RJDBC"); library(RJDBC)
+if(!require("stringr")) install.packages("stringr"); library(stringr)
+if(!require("xlsx")) install.packages("xlsx"); library(xlsx)
+if(!require("ggplot2")) install.packages("ggplot2"); library(ggplot2)
+if(!require("lattice")) install.packages("lattice"); library(lattice)
+if(!require("corrplot")) install.packages("corrplot"); library(corrplot)
+if(!require("car")) install.packages("car"); library(car)
+if(!require("MASS")) install.packages("MASS"); library(MASS)
+if(!require("nnet")) install.packages("nnet"); library(nnet)
+if(!require("fmsb")) install.packages("fmsb"); library(fmsb)
+
+
+# 학위논문 데이터 분석
+
 
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
 con <- dbConnect(drv, "jdbc:oracle:thin:@//localhost:32769/xe", "scott", "tiger")
-dbDisconnect(con) # 연결 종료
 d1 <- dbGetQuery(con, "select * from european order by ROWN")
-dbSendQuery(con, "")
 str(d1)
 
 # 구단명, 시즌 분리
@@ -18,8 +29,7 @@ season <- unlist(str_extract(d1$TEAM, "[0-9]{2}_[0-9]{2}"))
 d1$TEAM <- team
 d1$SEASON <- season
 View(d1)
-dim(d1)
-# 522*38
+dim(d1) # 522*40
 # 질문 엑셀 파일 임포트 했는데 행의 순서가 바뀜?
 
 # 빈 data.frame 만들기
@@ -36,23 +46,20 @@ View(df)
 str(df)
 dim(df)
 View(df)
-# 데이터 프레임 저장
-library(xlsx)
-write.xlsx(df, "indiv_project.xlsx", sheetName = "First", row.names = F)
 
-
-# 데이터 정규화
+# 데이터 표준화 / 정규화
 # scale() = 표준화
 # 정규화 nor = (x - min) / max - min
 # 정규분포 확인 shapiro.test
 shapiro.test(df[,5]) # p-value = 2.457e-12  < 0.05 : 정규성 X
-# 정규분포 함수 
+# 연속형변수가 정규분포가 아니기때문에 정규화 를 통해 범위 통일!
 nor <- function(x) {
   re <- (x - min(x)) / max(x) - min(x)
   return(re)
 }
 df[4:39] <- nor(df[4:39])
 summary(df)
+View(df)
 
 # 데이터 분류
 # 1. 국가별 변수 만들기
@@ -82,7 +89,7 @@ View(f_df)
 df <- f_df[1:4]
 df[5] <- f_df[41]
 df[6:41] <- f_df[5:40]
-View(df)
+View(f_df)
 
 # 데이터 확인
 dim(df) # 522  41
@@ -139,14 +146,12 @@ ggplot(df_f, aes(x = LEAGUE, fill = RANK_C)) + geom_bar()
 # Why ? 이상치를 제거해서 엄청 잘하거나 못하는 기록을 가진 팀 제거!
 
 # 시즌별 순위 변동 확인
-library(lattice)
 dotplot(-RANK ~ SEASON, data = df_f, groups = TEAM, type= "o")
 
 
 # 상관행렬
 df_f_cor <- cor(df_f[,6:41])
 round(df_f_cor, 2)
-library(corrplot)
 corrplot(df_f_cor, 
          method = "shade",  # 숫자로 표현
          type = "upper",     # 색상 200개 선정
@@ -170,7 +175,8 @@ df_f <- df_f %>% mutate(LEAGUE2 = ifelse(LEAGUE == "Germany", 1,
                                          ifelse(LEAGUE == "Spain", 2, 3)))
 
 # 변수명 추출
-aa <- colnames(df)
+aa <- colnames(df_f)
+str(aa)
 aa2 <- aa[4:39]
 dim(aa2)
 paste(aa2, collapse = "+")
@@ -178,11 +184,138 @@ paste(aa2, collapse = ", ")
 str(df)
 
 # plot.lm : 다중 회귀모델 lm(y ~ x) x : . (모든데이터)
+
+df_f2 <- df_f[c(aa[1], aa[4:39])]
+d
+df_f3 <- df_f3[-1]
+str(df_f3)
+
+# [분산팽창지수를 구하고 VIF 10 이상인 변수 중 가장 큰 값을 순차적으로 제거하는
+# R 사용자 정의함수]
+
+# Multi-collinearity check and remove the highly correlated variables step by step
+
+# UDF of stepwise VIF function with preallocated vectors
+
+# code source: https://beckmw.wordpress.com/2013/02/05/collinearity-and-stepwise-vif-selection/
+vif_func <- function(in_frame,thresh=10, trace=F,...){
+  
+  require(fmsb)
+  
+  if(class(in_frame) != 'data.frame') in_frame<-data.frame(in_frame)
+  
+  #get initial vif value for all comparisons of variables
+  
+  vif_init <- vector('list', length = ncol(in_frame))
+  
+  names(vif_init) <- names(in_frame)
+  
+  var_names <- names(in_frame)
+  
+  for(val in var_names){
+    
+    regressors <- var_names[-which(var_names == val)]
+    
+    form <- paste(regressors, collapse = '+')
+    
+    form_in <- formula(paste(val,' ~ .'))
+    
+    vif_init[[val]] <- VIF(lm(form_in,data=in_frame,...))
+    
+  }
+  
+  vif_max<-max(unlist(vif_init))
+  
+  if(vif_max < thresh){
+    
+    if(trace==T){ #print output of each iteration
+      
+      prmatrix(vif_init,collab=c('var','vif'),rowlab=rep('', times = nrow(vif_init) ),quote=F)
+      
+      cat('\n')
+      
+      cat(paste('All variables have VIF < ', thresh,', max VIF ',round(vif_max,2), sep=''),'\n\n')
+      
+    }
+    
+    return(names(in_frame))
+  }
+  else{
+    
+    in_dat<-in_frame
+    
+    #backwards selection of explanatory variables, stops when all VIF values are below 'thresh'
+    
+    while(vif_max >= thresh){
+      
+      vif_vals <- vector('list', length = ncol(in_dat))
+      
+      names(vif_vals) <- names(in_dat)
+      
+      var_names <- names(in_dat)
+      
+      for(val in var_names){
+        
+        regressors <- var_names[-which(var_names == val)]
+        
+        form <- paste(regressors, collapse = '+')
+        
+        form_in <- formula(paste(val,' ~ .'))
+        
+        vif_add <- VIF(lm(form_in,data=in_dat,...))
+        
+        vif_vals[[val]] <- vif_add
+        
+      }
+      
+      max_row <- which.max(vif_vals)
+      
+      #max_row <- which( as.vector(vif_vals) == max(as.vector(vif_vals)) )
+      
+      vif_max<-vif_vals[max_row]
+      
+      if(vif_max<thresh) break
+      
+      if(trace==T){ #print output of each iteration
+        
+        vif_vals <- do.call('rbind', vif_vals)
+        
+        vif_vals
+        
+        prmatrix(vif_vals,collab='vif',rowlab=row.names(vif_vals),quote=F)
+        
+        cat('\n')
+        
+        cat('removed: ', names(vif_max),unlist(vif_max),'\n\n')
+        
+        flush.console()
+      }
+      in_dat<-in_dat[,!names(in_dat) %in% names(vif_max)]
+    }
+    return(names(in_dat))
+  }
+}
+
+X_independent <- vif_func(df_f3, thresh=10, trace=T)
+
+
+
+
+
+
+
+
+
+
+
+
 # 순위 예측
 a1 <- read.xlsx("clustering.xlsx", sheetName = "군집분석")
-model <- lm(RANK ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
+model <- multinom(RANK ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
 summary(model)
+stepAIC(model)
 plot(model)
+sqrt(vif(model)) > 2
 # [결과식] RANK = -89.537 + 25.041*YELLOW + 224.440*RED -87.716*AERIALWON
 # + 355.221*SHOTS_CONCEDED - 342.777*OPEN_PLAY -3 36.073*SET_PIECE 
 # - 558.449*OWN_GOAL - 574.824*THROUGH_BALL
@@ -201,3 +334,12 @@ model3 <- lm(LEAGUE2 ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CO
 summary(model3)
 plot(model3)
 # Adjusted R-squared:  0.8329 (83%) , p-value: < 2.2e-16(유의한 회귀식)
+
+
+
+#############################################################################
+# 최종 수정 data.frame DB 전송
+dbWriteTable(con, name = "f_eruopean", value = df_f)
+
+# DB 연결 종료 
+dbDisconnect(con) 
