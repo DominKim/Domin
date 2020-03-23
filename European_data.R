@@ -185,10 +185,8 @@ str(df)
 
 # plot.lm : 다중 회귀모델 lm(y ~ x) x : . (모든데이터)
 
-df_f2 <- df_f[c(aa[1], aa[4:39])]
-d
-df_f3 <- df_f3[-1]
-str(df_f3)
+df_f2 <- df_f[c(aa[1], aa[6:39])]
+str(df_f2)
 
 # [분산팽창지수를 구하고 VIF 10 이상인 변수 중 가장 큰 값을 순차적으로 제거하는
 # R 사용자 정의함수]
@@ -296,46 +294,58 @@ vif_func <- function(in_frame,thresh=10, trace=F,...){
   }
 }
 
-X_independent <- vif_func(df_f3, thresh=10, trace=T)
-
-
-
-
-
-
-
-
+X_independent <- vif_func(df_f2, thresh=10, trace=T)
+paste(X_independent, collapse = "+")
+length(X_independent) # 30
+length(df_f2)         # 35
+# 제거된 함수  = SHORT_PASSES 25.24992, RIGHT_SIDE 53.54048, SHOT_MIDDLE 93.99055, OUTSIDE_OF_BOX 95.47376, GOALS 174.562 
 
 
 
 
 # 순위 예측
 a1 <- read.xlsx("clustering.xlsx", sheetName = "군집분석")
-model <- multinom(RANK ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
+model <- lm(RANK ~ SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+LEFT_SIDE+MIDDLE_SIDE+SHOT_LEFT+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OWN_THIRD, data = df_f2)
 summary(model)
 stepAIC(model)
 plot(model)
 sqrt(vif(model)) > 2
-# [결과식] RANK = -89.537 + 25.041*YELLOW + 224.440*RED -87.716*AERIALWON
-# + 355.221*SHOTS_CONCEDED - 342.777*OPEN_PLAY -3 36.073*SET_PIECE 
-# - 558.449*OWN_GOAL - 574.824*THROUGH_BALL
+# [결과식] 
 # Adjusted R-squared:  0.6759(67%) , p-value: < 2.2e-16(유의한 회귀식)
+summary(lm(formula = RANK ~ YELLOW + RED + PASS + AERIALWON + SHOTS_CONCEDED + 
+     FOULS + OPEN_PLAY + COUNTER_ATTACK + SET_PIECE + PENALTY + 
+     OWN_GOAL + CROSS + THROUGH_BALL + IN_6_YARD_BOX, data = df_f2))
 
 
 # 상위권 하위권 예측
-model2 <- lm(RANK_C2 ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
+idx <- sample(nrow(df_f), nrow(df_f)*0.7)
+train <- df_f[idx,]
+test <- df_f[-idx,]
+df_f$RANK_C2 <- ifelse(df_f$RANK_C2 == 1, 0, 1)
+table(train$RANK_C2 )
+model2 <- glm(RANK_C2 ~ SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+LEFT_SIDE+MIDDLE_SIDE+SHOT_LEFT+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OWN_THIRD, data = train, family = "binomial")
 summary(model2)
 plot(model2)
-# Adjusted R-squared:  0.4796 (47%) , p-value: < 2.2e-16(유의한 회귀식)
 
+# 로지스틱 회귀모델 예측치생성 : 검정 데이터
+# newdata = test : 새로운 데이터 셋, type = "response" : 0 ~ 1확률값으로 예측
+pred <- predict(model2, newdata = test, type = "response")
+pred
 
-# 리그 예측
-model3 <- lm(LEAGUE2 ~ GOALS+SHOTS+YELLOW+RED+POSSESSION+PASS+AERIALWON+SHOTS_CONCEDED+TACKLES+INTERCEPTIONS+FOULS+OFFSIDES+SHOTS_ON_TARGET+DRIBBLES+FOULDED+OPEN_PLAY+COUNTER_ATTACK+SET_PIECE+PENALTY+OWN_GOAL+CROSS+THROUGH_BALL+LONG_BALLS+SHORT_PASSES+LEFT_SIDE+MIDDLE_SIDE+RIGHT_SIDE+SHOT_LEFT+SHOT_MIDDLE+SHOT_RIGHT+IN_6_YARD_BOX+IN_18_YARD_BOX+OUTSIDE_OF_BOX+OWN_THIRD+MIDDLE_THIRD+OPPOSITION_THIRD, data = df_f)
-summary(model3)
-plot(model3)
-# Adjusted R-squared:  0.8329 (83%) , p-value: < 2.2e-16(유의한 회귀식)
+# cut off = 0.5
+cpred <- round(pred)
+table(cpred)
 
+y_true <- test$RANK_C2
 
+# 교차분할표
+table(y_true, cpred)
+acc <- (9 + 58) / nrow(test)
+acc # 0.8701299
+upper <- 9 / 15
+upper # 0.6
+lower <- 58 / 62
+lower # 0.9354839
 
 #############################################################################
 # 최종 수정 data.frame DB 전송
