@@ -1,5 +1,6 @@
 # import package
 Sys.setenv("JAVA_HOME" = "/Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home")
+if(!require("rJava")) install.packages("rJava");library(rJava)
 if(!require("dplyr")) install.packages("dplyr"); library(dplyr)
 if(!require("DBI")) install.packages("DBI"); library(DBI)
 if(!require("RJDBC")) install.packages("RJDBC"); library(RJDBC)
@@ -16,7 +17,6 @@ if(!require("fmsb")) install.packages("fmsb"); library(fmsb)
 
 # 학위논문 데이터 분석
 
-
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
 con <- dbConnect(drv, "jdbc:oracle:thin:@//localhost:32769/xe", "scott", "tiger")
@@ -30,33 +30,58 @@ d1$TEAM <- team
 d1$SEASON <- season
 View(d1)
 dim(d1) # 522*40
-# 질문 엑셀 파일 임포트 했는데 행의 순서가 바뀜?
 
-# 빈 data.frame 만들기
-df <- data.frame(matrix(nrow = 522, ncol = 1))
-df
-
+remove(df)
 # 변수 위치 조정
-df[1] <- d1[2]
-colnames(df) <- "RANK"
-df[2] <- d1[3]
+df <- d1[2:3]
 df[3] <- d1[40]
 df[4 :39] <- d1[4:39]
 View(df)
-str(df)
+str(df) # 522 39
 dim(df)
-View(df)
 
 # 데이터 표준화 / 정규화
 # scale() = 표준화
 # 정규화 nor = (x - min) / max - min
 # 정규분포 확인 shapiro.test
-shapiro.test(df[,5]) # p-value = 2.457e-12  < 0.05 : 정규성 X
-# 연속형변수가 정규분포가 아니기때문에 정규화 를 통해 범위 통일!
+# 정규성 검증 확인 자가 함수
+check_standard <- function(x) {
+  for (i in 1:38) {
+    tryCatch({
+      if(shapiro.test(x[,i])[[2]] >= 0.05){
+        print(colnames(df)[i])
+      }
+    }, error = function(e){cat("Error :", colnames(df)[i],conditionMessage(e), "\n")})
+  }
+}
+check_standard(df) # "SHOTS_CONCEDED"
+# [해설] 독립변수들이 "SHOTS_CONCEDED"를 제외하고 정규성을 띄지 않기 때문에
+#        정규화를 통해 값의 범위를 0 ~ 1 사이로 일치
+
+# 정규화 자가 함수
 nor <- function(x) {
   re <- (x - min(x)) / max(x) - min(x)
   return(re)
 }
+nor <- function(x, y) {
+  for (i in 1:length(x)) {
+    if (class(x[,i]) == "numeric") {
+      x[,i] <- (x[,i] - min(x[,i])) / max(x[,i]) - min(x[,i])
+      return(x)
+    } else if (colnames(x[i]) == y){
+      x[,i] <- x[,i]
+      return(x)
+    } else {
+      x[,i] <- x[,i]
+      return(x)
+    }
+    return(x)
+  } 
+}
+df_f <- nor(df, "RANK")
+View(df_f)
+View(df)
+class(df[, i]) == "numeric"
 df[4:39] <- nor(df[4:39])
 summary(df)
 View(df)
