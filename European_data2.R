@@ -19,6 +19,10 @@ if(!require("cvTools"))install.packages("cvTools"); library(cvTools)
 # 교차점겅(cvfolds)
 if(!require("ROCR")) install.packages("ROCR"); library(ROCR)
 # 분류정확도 그래프 
+if(!require("rpart")) install.packages("rpart"); library(rpart)
+if(!require("rpart.plot")) install.packages("rpart.plot"); library(rpart.plot)
+if(!require("rattle")) install.packages("rattle"); library(rattle)
+if(!require("randomForest")) install.packages("randomForest"); library(randomForest)
 
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
@@ -170,7 +174,94 @@ corrplot(df_f_cor,
 # RANK_C <- 이항 로지스틱 회귀분석, dt, 앙상블 모형
 # LEAGUE <- 다항 로지스틱 회구분석, dt, 앙상블 모형
 
+# 사용할 Dataset subset
+# TEAM, SEASON 제외
+u_df <- df_f[,-c(4,5)]
 
+####################################
+### RANK 예측
+####################################
+# 1. 다항 로지스틱 회귀분석 (multinum)
+
+# (1) 데이터 샘플링
+idx <- sample(nrow(u_df), 0.7*nrow(u_df))
+train <- u_df[idx,]
+test  <- u_df[-idx,]
+
+# (2) 회귀 모델 생성
+mul_model <- multinom(RANK ~ ., train)
+mul_model # 1,2위 예측 불가
+vif(mul_model)
+
+# (3) 회귀모델 예측치 생성
+mul_pred <- predict(mul_model, test)
+
+# (4) 모델평가 -> RANK 일정한 변수
+mul_true <- test$RANK
+mul_tab <- table(mul_true, mul_pred)
+mul_tab
+
+total <- 0
+for (i in 1:20) {
+  total <-  total + mul_tab[i,i]
+}
+acc <- total / sum(mul_tab)
+acc # 0.1688312
+
+mul_pr <- prediction(mul_pred, test$RANK)
+
+# [해설] 예측률이 너무 낮다.
+
+# 2. DT 
+
+# (1) 데이터 샘플링
+idx <- sample(nrow(u_df), 0.7*nrow(u_df))
+train <- u_df[idx,]
+test  <- u_df[-idx,]
+
+# (2) 회귀 모델 생성
+dt_model <- rpart(RANK ~ ., train)
+dt_model # 1,2위 예측 불가
+fancyRpartPlot(dt_model)
+
+# (3) 회귀모델 예측치 생성
+dt_pred <- predict(dt_model, test, type = "class")
+
+# (4) 모델평가 -> RANK 일정한 변수
+dt_true <- test$RANK
+dt_tab <- table(dt_true, dt_pred)
+
+total <- 0
+for (i in 1:20) {
+  total <-  total + dt_tab[i,i]
+}
+acc <- total / sum(dt_tab)
+acc # 0.1688312 > 0.1948052
+# [해설] 예측률이 너무 낮다. 그렇지만 로지스틱 회귀분석 보다는 높다.
+
+# 3. randomForest
+ntree <- 500
+mtry <- round(sqrt(38))
+mtry
+# (1) 랜덤 포레스트 모델 생성
+rf_model <- randomForest(RANK ~ ., u_df, ntree = ntree, mtry = mtry,
+                         importance = T)
+
+# (2) 중요 변수 확인
+varImpPlot(rf_model)
+
+# (3) 모델 평가
+rf_pred <- rf_model$predicted
+rf_true <- rf_model$y
+rf_tab <- table(rf_true, rf_pred)
+total <- 0
+for (i in 1:20) {
+  total <-  total + rf_tab[i,i]
+}
+acc <- total / sum(rf_tab)
+acc # 0.1333333
+# [해설] 3가지 모형중 가장 낮은 예측률을 보인다.
+# [결론] 많은 수의 x변수를 상용했기 때문에 공분산성 확인이 필요
 
 
 #############################################################################
