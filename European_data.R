@@ -13,13 +13,12 @@ if(!require("car")) install.packages("car"); library(car)
 # 공분산성(vif)
 if(!require("MASS")) install.packages("MASS"); library(MASS)
 if(!require("nnet")) install.packages("nnet"); library(nnet)
+# 다항형 로지스틱 회귀분석(multinum)
 if(!require("fmsb")) install.packages("fmsb"); library(fmsb)
 if(!require("cvTools"))install.packages("cvTools"); library(cvTools)
+# 교차점겅(cvfolds)
 if(!require("ROCR")) install.packages("ROCR"); library(ROCR)
 # 분류정확도 그래프 
-
-library(help = MASS)
-# 학위논문 데이터 분석
 
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
@@ -35,7 +34,6 @@ d1$SEASON <- season
 View(d1)
 dim(d1) # 522*40
 
-remove(df)
 # 변수 위치 조정
 df <- d1[2:3]
 df[3] <- d1[40]
@@ -68,13 +66,8 @@ nor <- function(x) {
   return(re)
 }
 
-df_f <- nor(df, "RANK")
-View(df_f)
-View(df)
-class(df[, i]) == "numeric"
+# 독립변수(x) 정규화 
 df[4:39] <- nor(df[4:39])
-summary(df)
-View(df)
 
 # 데이터 분류
 # 1. 국가별 변수 만들기
@@ -82,29 +75,23 @@ View(df)
 df$LEAGUE <- as.vector(runif(522, 1, 1))
 # 빈 열 만들기
 df$LEAGUE <- NA
-df$LEAGUE[1:162] <- 1
-df$LEAGUE[163:342] <- 2
-df$LEAGUE[343:522] <- 3
-df$LEAGUE <- ifelse(df$LEAGUE == 1, "Germany",
-                    ifelse(df$LEAGUE == 2, "Spain", "England"))
-
-# 변수 정렬
-View(df)
-dim(df)
-f_df <- df[1:3]
-f_df[4] <- df[40]
-f_df[5:40] <- df[4:39]
-View(f_df)
+df$LEAGUE[1:162] <- "Germany"
+df$LEAGUE[163:342] <- "Spain"
+df$LEAGUE[343:522] <- "England"
 
 # 2. 순위 별
-f_df <- f_df %>% mutate(RANK_C = ifelse(RANK <= 6, "Upper", "Lower"))
-View(f_df)
+df <- df %>% mutate(RANK_C = ifelse(RANK <= 6, "Upper", "Lower"))
+View(df)
+dim(df)
+# 변수정렬
+df_f <- df[1]
+df_f[2] <- df[41]
+df_f[3] <- df[40]
+df_f[4:41] <- df[2:39]
+View(df_f)
+write.xlsx(df_f, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
 
-# 변수 정렬
-df <- f_df[1:4]
-df[5] <- f_df[41]
-df[6:41] <- f_df[5:40]
-View(f_df)
+
 
 # 데이터 확인
 dim(df) # 522  41
@@ -134,7 +121,6 @@ for (i in 1:36) {
 table(df$RANK_C) # 360, 162
 table(df_f$RANK_C) # 204, 51
 boxplot(df_f[6:41])
-write.xlsx(df, "scale_indiv_project.xlsx", sheetName = "Second", row.names = F)
 str(df_f)
 # 비연속형 변수
 # RANK, TEAM, SEASON, LEAGUE, RANK_C
