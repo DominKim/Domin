@@ -44,7 +44,7 @@ dim(df)
 # scale() = 표준화
 # 정규화 nor = (x - min) / max - min
 # 정규분포 확인 shapiro.test
-# 정규성 검증 확인 자가 함수
+# 정규성 검증 확인 사용자 정의 함수
 check_standard <- function(x) {
   for (i in 1:38) {
     tryCatch({
@@ -58,7 +58,7 @@ check_standard(df) # "SHOTS_CONCEDED"
 # [해설] 독립변수들이 "SHOTS_CONCEDED"를 제외하고 정규성을 띄지 않기 때문에
 #        정규화를 통해 값의 범위를 0 ~ 1 사이로 일치
 
-# 정규화 자가 함수
+# 정규화 사용자 정의 함수
 nor <- function(x) {
   re <- (x - min(x)) / max(x) - min(x)
   return(re)
