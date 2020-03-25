@@ -10,11 +10,15 @@ if(!require("ggplot2")) install.packages("ggplot2"); library(ggplot2)
 if(!require("lattice")) install.packages("lattice"); library(lattice)
 if(!require("corrplot")) install.packages("corrplot"); library(corrplot)
 if(!require("car")) install.packages("car"); library(car)
+# 공분산성(vif)
 if(!require("MASS")) install.packages("MASS"); library(MASS)
 if(!require("nnet")) install.packages("nnet"); library(nnet)
 if(!require("fmsb")) install.packages("fmsb"); library(fmsb)
+if(!require("cvTools"))install.packages("cvTools"); library(cvTools)
+if(!require("ROCR")) install.packages("ROCR"); library(ROCR)
+# 분류정확도 그래프 
 
-
+library(help = MASS)
 # 학위논문 데이터 분석
 
 # db 연결
@@ -44,7 +48,7 @@ dim(df)
 # scale() = 표준화
 # 정규화 nor = (x - min) / max - min
 # 정규분포 확인 shapiro.test
-# 정규성 검증 확인 자가 함수
+# 정규성 검증 확인 사용자 정의 함수
 check_standard <- function(x) {
   for (i in 1:38) {
     tryCatch({
@@ -58,26 +62,12 @@ check_standard(df) # "SHOTS_CONCEDED"
 # [해설] 독립변수들이 "SHOTS_CONCEDED"를 제외하고 정규성을 띄지 않기 때문에
 #        정규화를 통해 값의 범위를 0 ~ 1 사이로 일치
 
-# 정규화 자가 함수
+# 정규화 사용자정의 함수
 nor <- function(x) {
   re <- (x - min(x)) / max(x) - min(x)
   return(re)
 }
-nor <- function(x, y) {
-  for (i in 1:length(x)) {
-    if (class(x[,i]) == "numeric") {
-      x[,i] <- (x[,i] - min(x[,i])) / max(x[,i]) - min(x[,i])
-      return(x)
-    } else if (colnames(x[i]) == y){
-      x[,i] <- x[,i]
-      return(x)
-    } else {
-      x[,i] <- x[,i]
-      return(x)
-    }
-    return(x)
-  } 
-}
+
 df_f <- nor(df, "RANK")
 View(df_f)
 View(df)
