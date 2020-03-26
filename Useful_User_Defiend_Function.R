@@ -109,3 +109,16 @@ paste(X_independent, collapse = "+")
 length(X_independent) # 30
 length(df_f2)         # 35
 # 제거된 함수  = SHORT_PASSES 25.24992, RIGHT_SIDE 53.54048, SHOT_MIDDLE 93.99055, OUTSIDE_OF_BOX 95.47376, GOALS 174.562 
+
+
+
+########
+# 다항 분류 지도함수 예측률 사용자 정의 함수
+# x = confusion matrix
+mul_acc <- function(x){
+  total <- 0
+  for (i in 1:20) {
+    total <-  total + x[i,i]
+  }
+  acc <- total / sum(x)
+}

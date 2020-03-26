@@ -22,7 +22,8 @@ if(!require("ROCR")) install.packages("ROCR"); library(ROCR)
 if(!require("rpart")) install.packages("rpart"); library(rpart)
 if(!require("rpart.plot")) install.packages("rpart.plot"); library(rpart.plot)
 if(!require("rattle")) install.packages("rattle"); library(rattle)
-if(!require("randomForest")) install.packages("randomForest"); library(randomForest)
+if(!require("randomForest")) install.packages("randomForest");library(randomForest)
+if(!require("xgboost")) install.packages("xgboost");library(xgboost)
 
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
@@ -170,9 +171,9 @@ corrplot(df_f_cor,
 ##############################################################################
 
 # RANK(서열), RANK_C(범주, 2), LEAGUE(범주, 3)
-# RANK <- 다항 로지스틱 회귀분석, dt, 앙상블 모형
-# RANK_C <- 이항 로지스틱 회귀분석, dt, 앙상블 모형
-# LEAGUE <- 다항 로지스틱 회구분석, dt, 앙상블 모형
+# RANK <- 다항 로지스틱 회귀분석, dt, 앙상블 모형(R.F, XGboost)
+# RANK_C <- 이항 로지스틱 회귀분석, dt, 앙상블 모형(R.F, XGboost)
+# LEAGUE <- 다항 로지스틱 회구분석, dt, 앙상블 모형(R.F, XGboost)
 
 # 사용할 Dataset subset
 # TEAM, SEASON 제외
@@ -263,10 +264,55 @@ acc # 0.1333333
 # [해설] 3가지 모형중 가장 낮은 예측률을 보인다.
 # [결론] 많은 수의 x변수를 상용했기 때문에 공분산성 확인이 필요
 
+# 4. xgboost 다항 로지스틱 회귀분석 "multi:softmax"
+str(u_df)
+
+# (1) 변수조정 -> ??? 범주형 변수 ㅠㅠ
+xg_df <- u_df[,-c(2,3)]
+xg_df$RANK <- as.numeric(xg_df$RANK) - 1
+# num_class = 20
+
+# (2) train / test
+idx <- sample(nrow(xg_df), 0.7*(nrow(xg_df)))
+train <- xg_df[idx,]
+test <- xg_df[-idx,]
+
+# (3) xgb.dmatrix 생성
+xg_dmatrix <- xgb.DMatrix(data = data.matrix(train[,-1]), label = train$RANK)
+
+# (4) model 생성
+xg_model <- xgboost(xg_dmatrix, max_depth = 2, eta = 1, nthread = 2,
+                    nrounds = 2, objective = "multi:softmax", 
+                    verbose = 0, num_class = 20)
+
+# (5) 중요도 확인
+import <- xgb.importance(colnames(train[,-1]), xg_model)
+import
+xgb.plot.importance(import)
+# # Goal, short passes..
+
+# (6) 예측도 확인
+pred <- predict(xg_model, data.matrix(test[,-1]))
+tab <- table(test[,1], pred)
+tab
+
+# 다항 분류 예측도 확인 사용자정의함수
+mul_acc <- function(x){
+  total <- 0
+  for (i in 1:20) {
+    total <-  total + x[i,i]
+  }
+  acc <- total / sum(x)
+}
+acc <- mul_acc(tab)
+acc # 0.133758
+
+# [해설] R.F보다는 다소 높은 예측률을 보이지만 다항 로지스틱이나 D.T보다는 낮다.
 
 #############################################################################
 # 최종 수정 data.frame DB 전송
-dbWriteTable(con, name = "f_eruopean", value = df_f)
+dbWriteTable(con, name = "f_eruopean", value = df_f) 
+
 
 # DB 연결 종료 
 dbDisconnect(con) 
