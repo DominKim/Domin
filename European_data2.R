@@ -332,6 +332,107 @@ acc # 0.09395973
 
 # [해설] Naive Bayes 모델은 가장 낮은 예측력을 보인다. 실제로 T.M에 더 적합한
 #        알고리즘이다.
+# So, 랭킹을 예측하기에는 너무 낮은 예측력을 보이므로 Rank_c를 예측!
+
+####################################
+### RANK_C 예측
+####################################
+# 1. 이항 로지스틱 회귀분석(glm)
+
+# (1) 데이터 샘프링
+idx <- sample(nrow(u_df), nrow(u_df)*0.7)
+train <- u_df[idx,-1]
+test  <- u_df[-idx,-1]
+table(u_df$RANK_C)
+# (2) 분류모델 생성
+model <- glm(RANK_C ~ ., train, family = "binomial")
+model
+
+# (3) 예측치 생성
+pred <- predict(model, newdata = test, type = "response")
+pred
+
+# (3) 1. cut off = 0.5
+pred <- ifelse(pred >= 0.5, 1, 0)
+table(pred)
+
+tab  <- table(test$RANK_C, pred)
+tab
+
+# (4) 예측률 y 변수 비율이 동일 x -> F1_score
+recall <- (tab[2,2]) / (tab[2,1] + tab[2,2])
+precision <- tab[2,2] / (tab[1,2] + tab[2,2])
+f1_score <- 2*((recall*precision) / (recall + precision))
+f1_score # 0.7948718
+
+# 2. DT
+# (1) 분류 모델
+dt_model <- rpart(RANK_C ~ ., train)
+prp(dt_model)
+fancyRpartPlot(dt_model)
+
+# (2) 예측
+dt_pred2 <- predict(dt_model, test, type = "class")
+
+# (3) 분류모델 평가
+dt_tab2 <- table(test$RANK_C, dt_pred2)
+dt_tab2
+recall <- (dt_tab2[2,2]) / (dt_tab2[2,1] + dt_tab2[2,2])
+precision <- dt_tab2[2,2] / (dt_tab2[1,2] + dt_tab2[2,2])
+f1_score <- 2*((recall*precision) / (recall + precision))
+f1_score # 0.725
+# [해설] 로지스틱 회귀분석(0.7948718) 보다는 낮다.
+
+# 3. randomForest
+ntree <- 500
+mtry <- round(sqrt(37))
+mtry
+# (1) 랜덤 포레스트 모델 생성
+rf_model <- randomForest(RANK_C ~ ., u_df[-1], ntree = ntree, mtry = mtry,
+                         importance = T)
+
+# (2) 중요 변수 확인
+varImpPlot(rf_model)
+
+# (3) 모델 평가
+rf_pred <- rf_model$predicted
+rf_true <- rf_model$y
+rf_tab <- table(rf_true, rf_pred)
+recall <- (rf_tab[2,2]) / (rf_tab[2,1] + rf_tab[2,2])
+precision <- rf_tab[2,2] / (rf_tab[1,2] + rf_tab[2,2])
+f1_score <- 2*((recall*precision) / (recall + precision))
+f1_score # 0.8441558
+# [해설] 이전 모델보다 앙상읍ㄹ 모형이 더 높은 예측력을 보인다.
+
+# 4. XGboost
+train$RANK_C <- as.character(train$RANK_C)
+train$RANK_C <- ifelse(train$RANK_C == "Lower", 0 ,1)
+test$RANK_C <- as.character(test$RANK_C)
+test$RANK_C <- ifelse(test$RANK_C == "Lower", 0 ,1)
+# (1) XGboost matrix 생성 
+View(train)
+dtrain <- xgb.DMatrix(data = data.matrix(train[-1]), label = train$RANK_C)
+dtrain
+
+# (2) 모델생성
+xgb_model <- xgboost(dtrain, max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
+                     objective = "binary:logistic", verbose = 0)
+# (3) 변수 영향력 확인
+import <- xgb.importance(colnames(test[-1]), xgb_model)
+import
+xgb.plot.importance(import)
+
+# (4) 예측력 확인
+pred <- predict(xgb_model, data.matrix(test[-1]))
+pred <- ifelse(pred >= 0.5, 1, 0)
+tab <- table(test$RANK_C, pred)
+tab
+recall <- (tab[2,2]) / (tab[2,1] + tab[2,2])
+precision <- tab[2,2] / (tab[1,2] + tab[2,2])
+f1_score <- 2*((recall*precision) / (recall + precision))
+f1_score # 0.7733333
+# [해설] 모델중 가장낮은 예측력을 보인다.
+
 
 #############################################################################
 # 최종 수정 data.frame DB 전송
