@@ -24,6 +24,7 @@ if(!require("rpart.plot")) install.packages("rpart.plot"); library(rpart.plot)
 if(!require("rattle")) install.packages("rattle"); library(rattle)
 if(!require("randomForest")) install.packages("randomForest");library(randomForest)
 if(!require("xgboost")) install.packages("xgboost");library(xgboost)
+if(!require("e1071")) install.packages("e1071");library(e1071)
 
 # db 연결
 drv <- JDBC("oracle.jdbc.OracleDriver", "/Users/mac/Downloads/ojdbc6.jar")
@@ -308,6 +309,29 @@ acc <- mul_acc(tab)
 acc # 0.133758
 
 # [해설] R.F보다는 다소 높은 예측률을 보이지만 다항 로지스틱이나 D.T보다는 낮다.
+
+# 5. Naive Bayes 일고리즘(e1071)
+
+# (1) train / test
+na_idx <- sample(nrow(u_df), nrow(u_df) * 0.7)
+na_train <- u_df[idx,]
+na_test <- u_df[-idx,]
+
+# (2) 분류모델생성
+model <- naiveBayes(na_train[-1], na_train$RANK)
+model
+
+# (3) 분류모델 평가 : test data 
+na_pred <- predict(model, na_test)
+na_pred
+
+# (4) 분류모델 평가
+na_tab <- table(na_test$RANK, na_pred)
+acc <- mul_acc(na_tab)
+acc # 0.09395973
+
+# [해설] Naive Bayes 모델은 가장 낮은 예측력을 보인다. 실제로 T.M에 더 적합한
+#        알고리즘이다.
 
 #############################################################################
 # 최종 수정 data.frame DB 전송
