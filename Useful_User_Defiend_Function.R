@@ -122,3 +122,16 @@ mul_acc <- function(x){
   }
   acc <- total / sum(x)
 }
+
+
+library(rJava)
+library(xlsx)
+library(dplyr)
+
+
+if(!require("readxl"))install.packages("readxl");library(readxl)
+files <- list.files(path = "C:/~" ,pattern = "*.xlsx", full.names = T)
+files
+tbl <- sapply(files, read_xlsx, simplify = F) %>% bind_rows(.id = "id")
+tbl <- data.frame(tbl)
+
