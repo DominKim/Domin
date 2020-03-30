@@ -6,7 +6,7 @@ files
 tbl <- sapply(files, read_xlsx, simplify = F) %>% bind_rows(.id = "id")
 tbl <- data.frame(tbl)
 
-
+boxplot(stock_price)
 str(tbl)
 
 
@@ -68,4 +68,40 @@ for (i in name) {
   mse[[cnt]] <- mean((stock_price$"주가" - pred[[cnt]])^2)
   cat(cor_re[[cnt]], "이다.", "\n")
 }
-mse
+
+
+
+#########################################
+### 교차검정
+#########################################
+
+# 단계1 : K겹 교차검정을 위한 샘플링
+if(!require("cvTools")) install.packages("cvTools");library(cvTools)
+?cvFolds
+# cvFolds(n, K = 5, R = 1,
+#         type = c("random", "consecutive", "interleaved"))
+cross <- cvFolds(n = nrow(stock_price), K = 10, R = 2, type = "random")
+cross
+str(cross)
+str(stock_price)
+# 단계2 : 검정 실시
+K <- 1:10 # K겹
+R <- 1:2  # Set 횟수
+cnt <- 1
+ACC <- numeric()
+ACC2 <- numeric()
+for (r in R) {
+  cat("R = ", r, "번째 Set", "\n")
+  for(k in K) {
+    idx <- cross$subsets[cross$which == k, r]
+    train <- stock_price[idx, ]
+    test  <- stock_price[-idx, ]
+    model <- lm(주가 ~ 매출액, train)
+    pred <- predict(model, test)
+    ACC[cnt] <- summary(model)["adj.r.squared"]
+    ACC2[cnt] <- cor(test$주가, pred)
+    cnt <- cnt + 1
+  }
+}
+mean(unlist(ACC))
+mean(unlist(ACC2))
