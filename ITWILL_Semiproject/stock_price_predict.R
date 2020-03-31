@@ -1,17 +1,24 @@
-
-
 if(!require("readxl"))install.packages("readxl");library(readxl)
 library(data.table) # rbindlist
 
 # multiple csv file read and join
 temp = list.files(pattern="*.csv")
-aa <- vector(mode = "list", length = 1)
+aa <- vector(mode = "list", length = 93)
 for (i in 1:length(temp)) {
   aa[[i]] <- read.csv(temp[i], fileEncoding = "euc-kr", stringsAsFactors = F, ) %>% mutate(id = temp[i])
 }
 bb <- rbindlist(aa)
+write.xlsx(bb, "total_raw_data.xlsx", sheetName = "rawdata", row.names = F)
+stock[6:22] <- ifelse(is.na(stock[6:22]), NA, as.numeric(unlist(stock[6:22])))
 
-
+# 데이터 불러오기 
+stock <- read.csv("stock_price.csv", stringsAsFactors = F)
+str(stock)
+dim(stock)
+summary(stock)
+stock %>% filter(is.na(매출액))
+stock3 <- na.omit(stock)
+dim(stock3)
 # 단순 회귀분석 
 # stock_price 변수 설명
 # $ id      : chr  
