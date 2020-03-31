@@ -1,3 +1,6 @@
+if(!require("cvTools")) install.packages("cvTools"); library(cvTools)
+if(!require("dplyr")) install.packages("dplyr"); library(dplyr)
+
 # (3) 모델 평가
 # 1) 산업명 정리
 industry_name <- names(table(re_stock$industry))
@@ -16,6 +19,10 @@ coefficient <- numeric()
 pred <- vector(mode = "list", length = 31)
 cor_re <- vector(mode = "list", length = 31)
 mse <- vector(mode = "list", length = 31)
+# n개의 관찰을 K(10)겹 교차 검증의 R(2)회 반복으로 분할한다
+cross <- cvFolds(n = nrow(re_stock), K = 10, R = 2, type = "random") 
+K <- 1:10; R <- 1:2  #  k겹, Set 횟수
+ACC <- numeric(); ACC2 <- numeric()
 
 for (i in 1:length(industry_name)) {
   
@@ -94,13 +101,7 @@ corrplot(cor(re_stock[6:22]), method = "number", type = "upper", diag = F)
 ### 교차검정
 #########################################
 
-# 단계1 : K겹 교차검정을 위한 샘플링
-if(!require("cvTools")) install.packages("cvTools");library(cvTools)
-?cvFolds
-# cvFolds(n, K = 5, R = 1,
-#         type = c("random", "consecutive", "interleaved"))
-cross <- cvFolds(n = nrow(re_stock), K = 10, R = 2, type = "random")
-cross
+
 str(cross)
 str(stock_price)
 # 단계2 : 검정 실시
