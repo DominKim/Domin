@@ -1,13 +1,15 @@
-# multiple excel file read and join
+
 
 if(!require("readxl"))install.packages("readxl");library(readxl)
-files <- list.files( pattern = "*.xlsx")
-files
-tbl <- sapply(files, read_xlsx, simplify = F) %>% bind_rows(.id = "id")
-tbl <- data.frame(tbl)
+library(data.table) # rbindlist
 
-boxplot(stock_price)
-str(tbl)
+# multiple csv file read and join
+temp = list.files(pattern="*.csv")
+aa <- vector(mode = "list", length = 1)
+for (i in 1:length(temp)) {
+  aa[[i]] <- read.csv(temp[i], fileEncoding = "euc-kr", stringsAsFactors = F, ) %>% mutate(id = temp[i])
+}
+bb <- rbindlist(aa)
 
 
 # 단순 회귀분석 
