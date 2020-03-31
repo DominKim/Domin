@@ -93,36 +93,6 @@ for (i in 1:31) {
 }
 sort(a, decreasing = T)
 
-# 
+# 상관 그래프
 par(family="NanumGothic")
 corrplot(cor(re_stock[6:22]), method = "number", type = "upper", diag = F)
-
-#########################################
-### 교차검정
-#########################################
-
-
-str(cross)
-str(stock_price)
-# 단계2 : 검정 실시
-K <- 1:10 # K겹
-R <- 1:2  # Set 횟수
-cnt <- 1
-ACC <- numeric()
-ACC2 <- numeric()
-for (r in R) {
-  cat("R = ", r, "번째 Set", "\n")
-  for(k in K) {
-    idx <- cross$subsets[cross$which == k, r]
-    train <- re_stock[idx, ]
-    test  <- re_stock[-idx, ]
-    model <- lm(주가 ~ 매출액, train)
-    pred <- predict(model, test)
-    ACC[cnt] <- summary(model)["adj.r.squared"]
-    ACC2[cnt] <- cor(test$주가, pred)
-    cnt <- cnt + 1
-  }
-}
-mean(unlist(ACC))
-mean(unlist(ACC2))
-unlist
