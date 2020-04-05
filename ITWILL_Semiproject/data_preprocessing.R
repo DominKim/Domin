@@ -12,7 +12,7 @@ summary(re_stock)
 str(re_stock)
 a <- summary(re_stock)[7,]
 a <- na.omit(a)
-
+a
 # 정제 후에 결측치를 가진 변수를 아래와 같이 추출하였다.
 # "   영업이익" "   당기순익" "   영업흐름" "     PBR"   "    부채율"  "   매출증가" "   지배ROE" 
 # 회의를 통해 주가의 특성을 고려해서 결측치를 가지는 변수들은 각 회사들의 연도별 평균을 가지고 
@@ -21,7 +21,7 @@ a <- na.omit(a)
 re_stock1 <- re_stock
 # 결측치 처리
 ## 결측치를 가지고 있는 변수들의 행 출력
-re_stock %>% filter(is.na(지배ROE)) %>% select(c(company, year, rownum))
+re_stock %>% filter(is.na(지배ROE)) %>% select(c(company))
 mean(re_stock[1282:1285, "지배ROE"])
 x <- re_stock %>% filter(company == "현대상사" & year == 12)
 x
@@ -36,6 +36,7 @@ for (i in 1:19) {
 }
 
 na_var_names <- unlist(str_remove_all(na_var_names, " "))
+na_var_names
 # 결측치 평균으로 대체
 for (i in 1:length(na_var_names)) {
   x[,na_var_names[i]] <- ifelse(is.na(x[,na_var_names[i]]), mean(x[,na_var_names[i]], na.rm = T), x[,na_var_names[i]])
