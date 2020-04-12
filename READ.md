@@ -8,4 +8,4 @@
 *
 *
 * Random Forest 결과
->> [R.F 결과]<img src="./ITWILL_Semiproject/output/랜덤포레스트결과값 상관도.png" width="40%" height="30%"></img>
+>> [R.F 결과]<img src="./ITWILL_Semiproject/output/랜덤포레스트결과값 상관도.png" width="80%" height="50%"></img>
