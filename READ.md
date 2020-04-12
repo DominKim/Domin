@@ -4,3 +4,8 @@
 >-----------------------------------
 * CSV 파일 In memroy
 >> [CSV 파일 병합](https://github.com/DominKim/Domin/blob/master/ITWILL_Semiproject/Join_rawdata.R)
+* 
+*
+*
+* Random Forest 결과
+>> [R.F 결과]<img src="./output/랜덤포레스트결과값 상관도.png" width="40%" height="30%"></img>
