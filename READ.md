@@ -4,7 +4,8 @@
 >-----------------------------------
 * CSV 파일 In memroy
 >> [CSV 파일 병합](https://github.com/DominKim/Domin/blob/master/ITWILL_Semiproject/Join_rawdata.R)
-* 
+* 데이터 전처리
+>> [데이터 전처리](https://github.com/DominKim/Domin/blob/master/ITWILL_Semiproject/data_preprocessing.R)
 *
 *
 * Random Forest 결과
