@@ -4,9 +4,14 @@
 >-----------------------------------
 * CSV 파일 In memroy
 >> [CSV 파일 병합](https://github.com/DominKim/Domin/blob/master/ITWILL_Semiproject/Join_rawdata.R)
-'''r
-library(ggplot2)
-'''
+
+~~~r
+# raw_data 병합
+if(!require("readxl"))install.packages("readxl");library(readxl)
+library(xlsx)
+library(data.table) # rbindlist
+if(!require("stringr"))install.packages("stringr");library(stringr)
+~~~
 * 데이터 전처리
 >> [데이터 전처리](https://github.com/DominKim/Domin/blob/master/ITWILL_Semiproject/data_preprocessing.R)
 *
